@@ -1,6 +1,7 @@
 package net
 
 import (
+	"crypto/tls"
 	"io"
 	"log"
 	"net/http"
@@ -90,8 +91,10 @@ func (w *WebsocketHandle) Init(c *types.Connection) error {
 	}
 
 	server := &http.Server{
-		Addr:      ":9090",
-		TLSConfig: m.TLSConfig(),
+		Addr: ":9090",
+		TLSConfig: &tls.Config{
+			GetCertificate: m.GetCertificate,
+		},
 	}
 
 	go func() {
