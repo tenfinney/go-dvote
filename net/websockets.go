@@ -11,6 +11,7 @@ import (
 
 	"github.com/vocdoni/go-dvote/net/epoll"
 	"github.com/vocdoni/go-dvote/types"
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gobwas/ws"
@@ -22,6 +23,7 @@ type WebsocketHandle struct {
 	e *epoll.Epoll
 }
 
+// TODO: treat both cases (SSL / No SSL)
 func (w *WebsocketHandle) upgrader(writer http.ResponseWriter, reader *http.Request) {
 
 	fail := func(err error) {
@@ -30,7 +32,8 @@ func (w *WebsocketHandle) upgrader(writer http.ResponseWriter, reader *http.Requ
 		writer.Write([]byte(err.Error()))
 	}
 
-	req, err := http.NewRequest("POST", "0.0.0.0:9090", reader.Body)
+	// TODO: web3 endpoint as env conf
+	req, err := http.NewRequest("POST", "<your-web3-endpoint>", reader.Body)
 	if err != nil {
 		fail(err)
 		return
@@ -64,6 +67,7 @@ func (w *WebsocketHandle) upgrader(writer http.ResponseWriter, reader *http.Requ
 	}
 }
 
+// TODO: treat both cases (SSL / No SSL)
 func (w *WebsocketHandle) Init(c *types.Connection) error {
 	// Increase resources limitations
 	var rLimit syscall.Rlimit
@@ -84,18 +88,22 @@ func (w *WebsocketHandle) Init(c *types.Connection) error {
 
 	http.HandleFunc(c.Path, w.upgrader)
 
+	// TODO: HostWhitelist as env conf
 	m := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("127.0.0.1"),
+		HostPolicy: autocert.HostWhitelist("<your-domain>"),
 		Cache:      autocert.DirCache("cache-path"),
 	}
 
+	// TODO: Addr as env conf, 443 required
 	server := &http.Server{
-		Addr: ":9090",
+		Addr: ":443",
 		TLSConfig: &tls.Config{
 			GetCertificate: m.GetCertificate,
 		},
 	}
+
+	server.TLSConfig.NextProtos = append(server.TLSConfig.NextProtos, acme.ALPNProto)
 
 	go func() {
 		log.Fatal(server.ListenAndServeTLS("", ""))

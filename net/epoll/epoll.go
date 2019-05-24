@@ -73,16 +73,10 @@ func (e *Epoll) Wait() ([]net.Conn, error) {
 	return connections, nil
 }
 
+// TODO: treat both cases (SSL / No SSL)
 func websocketFD(conn net.Conn) int {
-	//tls := reflect.TypeOf(conn.UnderlyingConn()) == reflect.TypeOf(&tls.Conn{})
-	// Extract the file descriptor associated with the connection
-	//connVal := reflect.Indirect(reflect.ValueOf(conn)).FieldByName("conn").Elem()
-	tcpConn := reflect.Indirect(reflect.ValueOf(conn)).FieldByName("conn")
-	//if tls {
-	//	tcpConn = reflect.Indirect(tcpConn.Elem())
-	//}
+	tcpConn := reflect.Indirect(reflect.Indirect(reflect.ValueOf(conn)).FieldByName("conn").Elem())
 	fdVal := tcpConn.FieldByName("fd")
 	pfdVal := reflect.Indirect(fdVal).FieldByName("pfd")
-
 	return int(pfdVal.FieldByName("Sysfd").Int())
 }
